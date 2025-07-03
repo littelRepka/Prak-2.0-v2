@@ -1,0 +1,103 @@
+# Используем последнюю версию Alpine
+FROM alpine:latest as builder
+
+# Установка зависимостей
+RUN apk add --no-cache \
+    c-ares\
+    openssl \
+    zlib \
+    #gcompat \
+    jsoncpp \
+    libuuid \
+    #flatpak \
+    libpq \
+    mariadb-connector-c \
+    sqlite-libs  \
+    build-base \
+    cmake \
+    git \
+    openssl-dev \
+    zlib-dev \
+    linux-headers \
+    boost-dev \
+    gcc \
+    llvm \
+    jsoncpp \
+    e2fsprogs-dev \
+    && mkdir /workspace
+
+WORKDIR /workspace
+# Клонируем jsoncpp и собираем
+RUN git clone https://github.com/open-source-parsers/jsoncpp  && \
+    cd jsoncpp && \
+    git checkout master && \
+    mkdir -p build && cd build && \
+    cmake \
+      -DCMAKE_INSTALL_PREFIX=/usr/local \
+      -DJSONCPP_BUILD_TESTS=OFF \
+      -DJSONCPP_BUILD_EXAMPLES=OFF \
+      -DBUILD_SHARED_LIBS=ON \
+      .. && \
+    make && \
+    make install
+    
+RUN git clone https://github.com/an-tao/drogon  && \
+    cd drogon && \
+    git submodule update --init
+
+# Собираем и устанавливаем Drogon с указанием путей к jsoncpp
+WORKDIR /workspace/drogon
+RUN mkdir -p build && \
+    cd build && \
+    cmake \
+      -DCMAKE_PREFIX_PATH=/usr/local \
+      -DJSONCPP_INCLUDE_DIRS=/usr/local/include \
+      -DJSONCPP_LIBRARIES=/usr/local/lib/libjsoncpp.so \
+        -DBUILD_CTL=OFF \           
+      -DBUILD_EXAMPLES=OFF \      
+      .. && \
+    make && \
+    make install
+# Копируем ваш проект
+WORKDIR /workspace
+COPY . .
+
+# Собираем ваше приложение
+WORKDIR /workspace
+RUN ls &&\
+ls /usr/local/lib/cmake/jsoncpp/ &&\
+mkdir -p build && \
+    cd build && \
+    cmake       -DCMAKE_PREFIX_PATH=/usr/local \
+      -DJSONCPP_INCLUDE_DIRS=/usr/local/include \
+      -DJSONCPP_LIBRARIES=/usr/local/lib/libjsoncpp.so \
+        -DBUILD_CTL=OFF \           
+      -DBUILD_EXAMPLES=OFF    .. &&\
+    make
+
+# Финальный образ — минимальный, только с исполняемым файлом
+FROM alpine:3.20
+
+# Установим минимальные зависимости
+RUN apk update && \
+    apk add --no-cache \
+        c-ares\
+        openssl \
+        zlib \
+        #gcompat \
+        jsoncpp \
+        libuuid \
+        #flatpak \
+        libpq \
+        mariadb-connector-c \
+        sqlite-libs  
+
+# Копируем бинарник из builder
+COPY --from=builder /workspace/build/calculator /usr/local/bin/
+COPY --from=builder /workspace/build/config.json /usr/local/bin/
+COPY --from=builder /workspace/build/libhiredis.so.0.14 /usr/lib/libhiredis.so.0.14
+# Открываем порт
+EXPOSE 8080
+
+# Запуск приложения
+CMD ["calculator"]

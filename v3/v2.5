@@ -1,0 +1,47 @@
+# Stage 1: Сборка приложения
+FROM drogonframework/drogon:latest AS builder
+
+WORKDIR /app
+
+COPY . .
+
+RUN mkdir -p build && \
+    cd build && \
+    cmake .. && \
+    make
+
+# Stage 2: Минимальный runtime на Alpine
+FROM alpine:3.20
+
+#USER root
+#WORKDIR /app
+
+RUN apk upgrade --available musl
+# Установка минимальных зависимостей
+RUN apk update && \
+    apk add --no-cache \
+        c-ares\
+        openssl \
+        zlib \
+        
+        #gcompat \
+        jsoncpp \
+        libuuid \
+        #flatpak \
+        libpq \
+        mariadb-connector-c \
+        sqlite-libs  
+        #make LINKER_PATH=/lib/ld-musl-x86_64.so.1 LOADER_NAME=ld-linux-x86-64.so.2
+        
+
+# Копируем исполняемый файл и конфиг
+COPY --from=builder /app/build/calculator /app/calculator
+COPY --from=builder /app/config.json /app/config.json
+COPY --from=builder /app/libhiredis.so.0.14 /usr/lib/libhiredis.so.0.14
+
+RUN apk add --no-cache libc6-compat  \
+    gcompat 
+    #make LINKER_PATH=/lib/ld-musl-x86_64.so.1 LOADER_NAME=/lib/ld-linux-x86-64.so.2 install
+#WORKDIR /app
+# Запуск приложения с указанием полного пути
+CMD ["/app/calculator" ]

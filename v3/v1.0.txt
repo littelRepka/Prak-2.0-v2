@@ -1,0 +1,17 @@
+FROM drogonframework/drogon:latest
+
+WORKDIR /app
+
+#COPY . /app
+
+RUN mkdir -p build && \
+    cd build && \
+    cmake .. && \
+    make
+
+
+WORKDIR /app/build
+
+EXPOSE 8080
+
+CMD ["./calculator"]
