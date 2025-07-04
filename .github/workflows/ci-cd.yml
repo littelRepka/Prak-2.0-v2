@@ -20,12 +20,7 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - name: Run unit tests inside container
-          run: |
-            docker create --name calculator_container littelrepka/hello-drogon3.0:latest
-            docker cp calculator_container:/app/main_test ./main_test
-            chmod +x ./main_test
-            ./main_test --gtest_color=yes
-            echo "✅ Tests passed successfully!"
+          run: docker run --rm ghcr.io/littelrepka/hello-drogon3.0:latest ctest --test-dir /app/build --output-on-failure
 
   Deploy-To-Github-Registry:
     runs-on: ubuntu-latest
