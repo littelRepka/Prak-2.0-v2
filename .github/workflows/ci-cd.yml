@@ -1,62 +1,76 @@
-name: CI/CD Pipeline for Drogon App
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-env:
-  # Use docker.io for Docker Hub if empty
-  REGISTRY: ghcr.io
+name: CI/CD for cpp-endpoint
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+on: [push]
 jobs:
-  build-test_deploy:
+  Explore-GitHub-Actions:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
+      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
+      - name: List files in the repository
+        run: |
+          ls ${{ github.workspace }}
+      - run: echo "🍏 This job's status is ${{ job.status }}."
+  Lint-build-test:
+    name: Lint, build, test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: lukka/get-cmake@latest
 
-      - name: Docker Login
-        uses: docker/login-action@v3.4.0
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKER_PASSWORD }}
-          password: ${{ secrets.DOCKER_USERNAME }}
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        # with:
+        #   runVcpkgInstall: true
 
-      - name: Build Docker image
-        run: |
-          docker build -t ghcr.io/littelrepka/hello-drogon3.0:latest .
-
-      - name: Run unit tests inside container
-        run: |
-          # Запускаем контейнер, чтобы получить доступ к тестовому бинарнику
-          docker create --name calculator_container littelrepka/hello-drogon3.0:latest
-          docker cp calculator_container:/app/main_test ./main_test
-          chmod +x ./main_test
-
-          # Запускаем тесты
-          ./main_test --gtest_color=yes
-
-          # Вывод результата
-          echo "✅ Tests passed successfully!"
-
-      - name: Push Docker image to Docker Hub
-        run: |
-          docker push ghcr.io/littelrepka/hello-drogon3.0:latest
-
-      - name: Deploy to Kubernetes
+      - name: Configure Project
         env:
-          KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA}}
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
         run: |
-          echo "$KUBECONFIG_DATA" > kubeconfig.yaml
-          export KUBECONFIG=$(pwd)/kubeconfig.yaml
+          mkdir -p build && cd build
+          cmake .. \
+            -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake \
+            -DENABLE_COVERAGE=ON
 
-          kubectl apply -f k8s/deployment.yaml
+      - name: Run Clang-Tidy Linter
+        run: |
+          cd build
+          make clean
+          run-clang-tidy -checks='-*,bugprone-string-constructor,readability-function-size'
 
-          # Дожидаемся готовности подов \
-          kubectl rollout status deployment/server-deploy --timeout=60s
+      - name: Build
+        run: |
+          cd build
+          make
+
+      - name: Test Project
+        uses: threeal/ctest-action@v1.1.0
+
+      - name: Check Test Coverage
+        uses: threeal/gcovr-action@v1.1.0
+        with:
+          html-out: coverage.html
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.html
+
+  Deploy-To-Github-Registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and push the image
+        run: |
+          docker login --username littelRepka --password ${{ secrets.GH_PAT }} ghcr.io 
+          docker build . --tag ghcr.ioghcr.io/littelrepka/hello-drogon3.0:latest
+          docker push ghcr.ioghcr.io/littelrepka/hello-drogon3.0:latest
