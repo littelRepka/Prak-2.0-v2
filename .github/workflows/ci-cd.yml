@@ -30,7 +30,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t littelrepka/hello-drogon3.0:latest .
+          docker build -t ghcr.io/littelrepka/hello-drogon3.0:latest .
 
       - name: Run unit tests inside container
         run: |
@@ -47,7 +47,7 @@ jobs:
 
       - name: Push Docker image to Docker Hub
         run: |
-          docker push littelrepka/hello-drogon3.0:latest
+          docker push ghcr.io/littelrepka/hello-drogon3.0:latest
 
       - name: Deploy to Kubernetes
         env:
