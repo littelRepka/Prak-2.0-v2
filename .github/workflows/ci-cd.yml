@@ -71,6 +71,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build and push the image
         run: |
-          docker login --username littelRepka --password ${{ secrets.GH_PAT }} ghcr.io 
+          docker login --username littelRepka --password ${{ secrets.DOCKER_PASSWORD }} ghcr.io 
           docker build . --tag ghcr.ioghcr.io/littelrepka/hello-drogon3.0:latest
           docker push ghcr.ioghcr.io/littelrepka/hello-drogon3.0:latest
