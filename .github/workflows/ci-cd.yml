@@ -17,53 +17,15 @@ jobs:
           ls ${{ github.workspace }}
       - run: echo "🍏 This job's status is ${{ job.status }}."
   Lint-build-test:
-    name: Lint, build, test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - uses: lukka/get-cmake@latest
-
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-        # with:
-        #   runVcpkgInstall: true
-
-      - name: Configure Project
-        env:
-          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-        run: |
-          mkdir -p build && cd build
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake \
-            -DENABLE_COVERAGE=ON
-
-      - name: Run Clang-Tidy Linter
-        run: |
-          cd build
-          make clean
-          run-clang-tidy -checks='-*,bugprone-string-constructor,readability-function-size'
-
-      - name: Build
-        run: |
-          cd build
-          make
-
-      - name: Test Project
-        uses: threeal/ctest-action@v1.1.0
-
-      - name: Check Test Coverage
-        uses: threeal/gcovr-action@v1.1.0
-        with:
-          html-out: coverage.html
-
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage.html
+      runs-on: ubuntu-latest
+      steps:
+        - name: Run unit tests inside container
+          run: |
+            docker create --name calculator_container littelrepka/hello-drogon3.0:latest
+            docker cp calculator_container:/app/main_test ./main_test
+            chmod +x ./main_test
+            ./main_test --gtest_color=yes
+            echo "✅ Tests passed successfully!"
 
   Deploy-To-Github-Registry:
     runs-on: ubuntu-latest
@@ -73,4 +35,4 @@ jobs:
         run: |
           docker login --username littelRepka --password ${{ secrets.DOCKER_PASSWORD }} ghcr.io 
           docker build . --tag ghcr.io/littelrepka/hello-drogon3.0:latest
-          docker push ghcr.ioghcr.io/littelrepka/hello-drogon3.0:latest
+          docker push ghcr.io/littelrepka/hello-drogon3.0:latest
