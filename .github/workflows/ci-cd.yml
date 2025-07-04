@@ -19,4 +19,8 @@ jobs:
       run: docker build --no-cache --progress=plain -t $IMAGE_NAME .
 
     - name: ✅ Run tests
+<<<<<<< HEAD
       run: docker run --rm $IMAGE_NAME ctest --test-dir /app/build --output-on-failure
+=======
+      run: docker run --rm $IMAGE_NAME ctest --test-dir /app/build --output-on-failure
+>>>>>>> 748910eeb6dd87d3a11eafcc37d6673c1dce9604
