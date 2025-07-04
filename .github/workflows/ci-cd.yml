@@ -19,6 +19,7 @@ jobs:
   Lint-build-test:
       runs-on: ubuntu-latest
       steps:
+        - uses: actions/checkout@v4
         - name: Run unit tests inside container
           run: |
             docker login --username littelRepka --password ${{ secrets.DOCKER_PASSWORD }} ghcr.io 
