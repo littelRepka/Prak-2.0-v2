@@ -35,12 +35,4 @@ jobs:
           docker login --username littelRepka --password ${{ secrets.DOCKER_PASSWORD }} ghcr.io 
           docker build . --tag ghcr.io/littelrepka/hello-drogon3.0:latest
           docker push ghcr.io/littelrepka/hello-drogon3.0:latest
-      - name: Deploy to Kubernetes
-        env:
-          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
-        run: |
-          echo "$KUBE_CONFIG_DATA" | base64 --decode > kubeconfig.yaml
-          export KUBECONFIG=$(pwd)/kubeconfig.yaml
-          minikube start
-          kubectl apply -f k8s/deployment.yaml
- 
+
