@@ -21,7 +21,7 @@ jobs:
 
       - name: Login to DockerHub
         run: |
-          docker login --username littelrepka --password ${{ secrets.DOCKER_PASSWORD}} ghcr.io 
+          docker login --username littelRepka --password ${{ secrets.DOCKER_PASSWORD}} ghcr.io 
 
       - name: Build Docker image
         run: |
